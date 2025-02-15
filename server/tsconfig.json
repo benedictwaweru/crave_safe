@@ -1,0 +1,18 @@
+{
+	"extends": "@tsconfig/node22/tsconfig.json",
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["ES2022"],
+		"outDir": "dist",
+		"sourceMap": true,
+		"moduleResolution": "nodenext",
+		"forceConsistentCasingInFileNames": true,
+
+		"baseUrl": ".",
+		"paths": {
+			"@/*": ["./app/src/*", "./app/aws/*"]
+		}
+	},
+	"include": ["app/**/*"],
+	"exclude": ["node_modules"]
+}
