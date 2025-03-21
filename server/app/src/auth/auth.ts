@@ -1,21 +1,35 @@
-/**
- *
- * User inputs password, then password is salted, hashed, encrypted then stored in the database. Maybe add another layer of encryption to the DB
- *
- */
+// --------------------------------------------------------------------
+// --------------------------------------------------------------------
 
-
+import argon2 from "argon2";
+import crypto, { Encoding } from "crypto";
 
 /**
  * Hashing, salting, generate OTPs
  */
 export class PasswordActions {
-	constructor() {
+	private pepper: string;
+
+	constructor(pepper: string) {
+		this.pepper = pepper;
+	}
+	
+	async hashPassword(password: string): Promise<string> {
+		const passwordWithPepper = `${password}${this.pepper}`;
+		return await argon2.hash(passwordWithPepper,
+			{
+				type: argon2.argon2id,
+				memoryCost: 2 ** 16,
+				timeCost: 3,
+				parallelism: 1
+			}
+		);
 	}
 
-	async generateSalt() {}
-
-	async hashPassword() {}
+	async verifyPassword(storedHash: string, enteredPassword: string): Promise<boolean> {
+		const passwordWithPepper = `${enteredPassword}${this.pepper}`;
+		return await argon2.verify(storedHash, passwordWithPepper);
+	}
 }
 
 /**
@@ -34,37 +48,89 @@ export class OAuth {
 	 */
 }
 
-export class BiometricAuth {
-	/**
-	 * FaceID, fingerprint, voice
-	 */
+/**
+ * Biometric Auth
+ */
+interface IBiometricAuth {
+	registerPasskey(): Promise<void>;
+	loginWithPasskey(): Promise<void>;
+	authenticateWithPasskey(): Promise<boolean>;
 }
+
+export class FingerprintAuth { }
+
+export class FaceIDAuth { }
+
+// --------------------------------------------------------------------
+// Encryption and Decryption
+//
+// --------------------------------------------------------------------
+interface ICryptoAlgorithm {
+	/**
+	 * 
+	 */
+	//generateKey(): Promise<Buffer>;
+
+	/**
+	 * 
+	 * @param data 
+	 */
+	//encrypt(data: string): Promise<void>;
+
+	/**
+	 * 
+	 * @param data 
+	 */
+	//decrypt(data: string): Promise<string>;
+}
+
+//
+// Symmetric Encryption
+//
+export class AESEncryption implements ICryptoAlgorithm {
+	private aesAlgorithm: string;
+	private keyLength: number;
+	private ivLength: number;
+	private inputEncoding: Encoding;
+	private outputEncoding: Encoding;
+
+	constructor(aesAlgorithm: string, keyLength: number, ivLength: number, inputEncoding: Encoding, outputEncoding: Encoding) {
+		this.aesAlgorithm = aesAlgorithm;
+		this.keyLength = keyLength;
+		this.ivLength = ivLength;
+		this.inputEncoding = inputEncoding;
+		this.outputEncoding = outputEncoding;
+	}
+
+	async generateKey(): Promise<Buffer> {
+		return crypto.randomBytes(this.keyLength);
+	}
+
+	async encrypt(plainText: string, key: Buffer): Promise<{ encryptedData: string, iv: string, authTag: string }> {
+		const iv = crypto.randomBytes(this.ivLength);
+		const cipher = crypto.createCipheriv(this.aesAlgorithm, key, iv) as crypto.CipherGCM;
+
+		let encrypted = cipher.update(plainText, this.inputEncoding, this.outputEncoding);
+		encrypted += cipher.final(this.outputEncoding);
+
+		return {
+			encryptedData: encrypted,
+			iv: iv.toString(this.outputEncoding),
+			authTag: cipher.getAuthTag().toString(this.outputEncoding)
+		};
+	}
+	
+	//async decrypt(data: string): Promise<void> {}
+	
+}
+
+export class ChaCha { }
 
 /**
- * Symmetric(AES, DES(obsolete), 3DES), Asymmetric(RSA, ECC), File hashing(SHA-2, SHA-3), FDE, File Encryption, end-to-end, DB Encryption, SSL/TLS, Cloud
+ * Asymmetric Encryption
  */
+export class RSAEncryption { }
 
-/**
- * Encryption
- */
-export class SymmetricEncryption {
-	/**
-	 * AES, ChaCha20
-	 */
-}
+export class ECCEncryption { }
 
-export class AsymmetricEncryption {
-	/**
-	 * RSA, ECC, McEliece Cryptosystem
-	 */
-}
-
-export class FileEncryption extends SymmetricEncryption {}
-
-export class DBEncryption extends SymmetricEncryption {
-	/**
-	 * Row-level, column-level, DB Backup
-	 */
-}
-
-export class SSLTLS extends AsymmetricEncryption {}
+export class McElieceCryptosystem { }
